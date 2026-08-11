@@ -15,11 +15,11 @@ Dibuat menggunakan **PHP Native** berarsitektur *asynchronous* (Fetch API) dan d
 
 | Landing Page | Dashboard Catatan |
 | :---: | :---: |
-| ![Landing Page](assets/img/screenshots/MainPages.png) | ![Note Management](assets/img/screenshots/NoteManagement.png) |
+| ![Landing Page](docs/MainPages.png) | ![Note Management](docs/NoteManagement.png) |
 
 | Tambah Catatan (Color Picker) | Modal Edit & Detail |
 | :---: | :---: |
-| ![Add Note](assets/img/screenshots/AddNote.png) | ![Note Detail](assets/img/screenshots/NoteDetail.png) |
+| ![Add Note](docs/AddNote.png) | ![Note Detail](docs/NoteDetail.png) |
 
 ---
 
