@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "dev": "npx tailwindcss -i ./assets/css/input.css -o ./dist/output.css --watch",
+    "build": "npx tailwindcss -i ./assets/css/input.css -o ./dist/output.css --minify",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

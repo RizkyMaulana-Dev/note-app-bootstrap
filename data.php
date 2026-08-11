@@ -1,472 +1,432 @@
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-// header('Content-Type: application/json'); // Set the header for JSON response
 
 include "koneksi.php";
 
-// Function to send JSON response
-function sendJsonResponse($data)
-{
-  echo json_encode($data);
-  exit;
+// Fungsi response JSON
+function sendJsonResponse($data) {
+    header('Content-Type: application/json');
+    echo json_encode($data);
+    exit;
 }
 
+// Fungsi pintar untuk menentukan warna teks berdasarkan warna background (YIQ Ratio)
+function getContrastColor($hexcolor) {
+    $hexcolor = ltrim($hexcolor, '#');
+    // Handle format shorthand (misal: #fff)
+    if (strlen($hexcolor) == 3) {
+        $hexcolor = $hexcolor[0].$hexcolor[0].$hexcolor[1].$hexcolor[1].$hexcolor[2].$hexcolor[2];
+    }
+    // Jika tidak ada warna, anggap putih
+    if (strlen($hexcolor) != 6) return 'text-slate-800';
+
+    $r = hexdec(substr($hexcolor, 0, 2));
+    $g = hexdec(substr($hexcolor, 2, 2));
+    $b = hexdec(substr($hexcolor, 4, 2));
+    
+    // Rumus YIQ untuk kecerahan
+    $yiq = (($r * 299) + ($g * 587) + ($b * 114)) / 1000;
+    
+    // Jika YIQ >= 128 (terang), gunakan teks gelap. Jika tidak, gunakan teks putih.
+    return ($yiq >= 128) ? 'text-slate-800' : 'text-white';
+}
+
+// 1. DELETE LABEL
 if (isset($_GET['delete_label_id'])) {
-  $deleteLabelId = intval($_GET['delete_label_id']); // Sanitize input
-  $sql = "DELETE FROM Labels WHERE id_label = $deleteLabelId";
-
-  // Prepare the response array
-  $response = [];
-
-  if ($conn->query($sql) === TRUE) {
-    $response['success'] = 'Label deleted successfully';
-    $response['deleted_id'] = $deleteLabelId;
-  } else {
-    $response['error'] = 'Failed to delete label: ' . $conn->error;
-  }
-
-  // Add debug information
-  $response['debug'] = [
-    'attempted_delete_id' => $deleteLabelId,
-    'sql_query' => $sql,
-  ];
-
-  sendJsonResponse($response);
-}
-
-if (isset($_GET['sort'])) {
-  $sort = $_GET['sort'];
-  $orderBy = '';
-
-  switch ($sort) {
-    case 'judul':
-      $orderBy = 'ORDER BY judul ASC';
-      break;
-    case 'label':
-      $orderBy = 'ORDER BY nama_label ASC';
-      break;
-    case 'tanggal_ubah':
-      $orderBy = 'ORDER BY tanggal_ubah DESC';
-      break;
-    case 'tanggal':
-    default:
-      $orderBy = 'ORDER BY tanggal_buat DESC';
-      break;
-  }
-
-  $sql = "SELECT Notes.*, Labels.nama_label, Labels.warna FROM Notes LEFT JOIN Labels ON Notes.id_label = Labels.id_label $orderBy";
-  $result = $conn->query($sql);
-
-  $notes = [];
-  if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-      $notes[] = $row;
+    $deleteLabelId = intval($_GET['delete_label_id']);
+    $sql = "DELETE FROM Labels WHERE id_label = $deleteLabelId";
+    if ($conn->query($sql) === TRUE) {
+        sendJsonResponse(['success' => 'Label berhasil dihapus']);
+    } else {
+        sendJsonResponse(['error' => 'Gagal menghapus label: ' . $conn->error]);
     }
-  }
-
-  sendJsonResponse(['notes' => $notes]);
 }
 
-if (isset($_GET['search'])) {
-  $searchTerm = $conn->real_escape_string($_GET['search']);
-  $sql = "SELECT Notes.*, Labels.nama_label, Labels.warna FROM Notes LEFT JOIN Labels ON Notes.id_label = Labels.id_label WHERE judul LIKE '%$searchTerm%' OR isi LIKE '%$searchTerm%' ORDER BY tanggal_buat DESC";
-  $result = $conn->query($sql);
+// 2. GET NOTES (SORT & SEARCH)
+if (isset($_GET['action']) && $_GET['action'] == 'get_notes') {
+    $orderBy = 'ORDER BY tanggal_buat DESC';
+    $where = '';
 
-  $notes = [];
-  if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-      $notes[] = $row;
+    if (isset($_GET['sort'])) {
+        switch ($_GET['sort']) {
+            case 'judul': $orderBy = 'ORDER BY judul ASC'; break;
+            case 'label': $orderBy = 'ORDER BY nama_label ASC'; break;
+            case 'tanggal_ubah': $orderBy = 'ORDER BY tanggal_ubah DESC'; break;
+        }
     }
-  }
 
-  sendJsonResponse(['notes' => $notes]);
+    if (isset($_GET['search']) && !empty($_GET['search'])) {
+        $searchTerm = $conn->real_escape_string($_GET['search']);
+        $where = "WHERE judul LIKE '%$searchTerm%' OR isi LIKE '%$searchTerm%'";
+    }
+
+    $sql = "SELECT Notes.*, Labels.nama_label FROM Notes LEFT JOIN Labels ON Notes.id_label = Labels.id_label $where $orderBy";
+    $result = $conn->query($sql);
+    $notes = [];
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) $notes[] = $row;
+    }
+    sendJsonResponse(['notes' => $notes]);
 }
 
+// 3. GET SINGLE NOTE
 if (isset($_GET['note_id'])) {
-  $note_id = intval($_GET['note_id']);
-  $sql = "SELECT * FROM Notes WHERE id_catatan = $note_id";
-  $result = $conn->query($sql);
-  if ($result->num_rows > 0) {
-    $note = $result->fetch_assoc();
-    sendJsonResponse($note);
-  } else {
-    sendJsonResponse(['error' => 'Note not found']);
-  }
+    $note_id = intval($_GET['note_id']);
+    $sql = "SELECT * FROM Notes WHERE id_catatan = $note_id";
+    $result = $conn->query($sql);
+    if ($result->num_rows > 0) sendJsonResponse($result->fetch_assoc());
+    else sendJsonResponse(['error' => 'Catatan tidak ditemukan']);
 }
 
+// 4. DELETE NOTE
 if (isset($_GET['delete_id'])) {
-  $delete_id = intval($_GET['delete_id']);
-  $sql = "DELETE FROM Notes WHERE id_catatan = $delete_id";
-  if ($conn->query($sql) === TRUE) {
-    sendJsonResponse(['success' => 'Note deleted successfully']);
-  } else {
-    sendJsonResponse(['error' => 'Failed to delete note']);
-  }
+    $delete_id = intval($_GET['delete_id']);
+    $sql = "DELETE FROM Notes WHERE id_catatan = $delete_id";
+    if ($conn->query($sql) === TRUE) sendJsonResponse(['success' => 'Catatan dihapus']);
+    else sendJsonResponse(['error' => 'Gagal menghapus']);
 }
 
+// 5. UPDATE NOTE
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['noteId'])) {
-  $noteId = intval($_POST['noteId']);
-  $title = $conn->real_escape_string($_POST['title']);
-  $content = $conn->real_escape_string($_POST['content']);
-  $labelId = intval($_POST['label']);
-  $sql = "UPDATE Notes SET judul = '$title', isi = '$content', id_label = '$labelId', tanggal_ubah = NOW() WHERE id_catatan = $noteId";
-  if ($conn->query($sql) === TRUE) {
-    sendJsonResponse(['success' => 'Note updated successfully']);
-  } else {
-    sendJsonResponse(['error' => 'Failed to update note']);
-  }
+    $noteId = intval($_POST['noteId']);
+    $title = $conn->real_escape_string($_POST['title']);
+    $content = $conn->real_escape_string($_POST['content']);
+    $labelId = intval($_POST['label']) > 0 ? intval($_POST['label']) : 'NULL';
+    
+    $sql = "UPDATE Notes SET judul = '$title', isi = '$content', id_label = $labelId, tanggal_ubah = NOW() WHERE id_catatan = $noteId";
+    if ($conn->query($sql) === TRUE) sendJsonResponse(['success' => 'Berhasil diperbarui']);
+    else sendJsonResponse(['error' => 'Gagal update']);
 }
 
-function generateNoteCard($row)
-{
-  $bgColor = htmlspecialchars($row['bg_color']) ?: 'gray'; // Default color if no color is set
-  $label = htmlspecialchars($row['nama_label']) ?: 'Tanpa Kategori';
+// HTML Component Generator
+function generateNoteCard($row) {
+    $bgColor = htmlspecialchars($row['bg_color'] ?? '#ffffff');
+    $label = htmlspecialchars($row['nama_label'] ?? 'Tanpa Kategori');
+    
+    // Menerapkan fungsi pintar pencocokan warna teks
+    $textColor = getContrastColor($bgColor);
+    
+    // Jika teksnya putih, background label harus sedikit disesuaikan agar tidak hilang
+    $labelStyle = ($textColor === 'text-white') 
+        ? "bg-black/30 backdrop-blur text-white" 
+        : "bg-white/80 backdrop-blur text-slate-700";
+    
+    $judul = htmlspecialchars($row['judul']);
+    $isi = htmlspecialchars($row['isi']);
+    $idNote = htmlspecialchars($row['id_catatan']);
+    $tglBuat = date('d M Y', strtotime($row['tanggal_buat']));
 
-  $textColor = $row['id_label'] ? 'text-white' : 'text-gray-700';
-  $dateColor = 'text-gray-600';
-
-  $judul = htmlspecialchars($row['judul']);
-  $isi = htmlspecialchars($row['isi']);
-  $idNote = htmlspecialchars($row['id_catatan']);
-
-  return "<div style='background-color: $bgColor;' class='rounded-lg shadow-md p-6 relative cursor-pointer' onclick='openEditModal($idNote)'>
-                 <span class='absolute top-2 right-2 bg-white text-$bgColor px-3 py-1 text-sm font-semibold rounded'>$label</span>
-                 <h2 class='text-xl font-semibold mb-2 $textColor' style='overflow: hidden; white-space: nowrap; text-overflow: ellipsis;'>$judul</h2>
-                 <p class='$textColor' style='overflow: hidden; white-space: nowrap; text-overflow: ellipsis;'>$isi</p>
-                 <p class='text-sm $textColor bg-$bgColor inline-flex px-4 py-1 rounded-lg mt-2'>Tanggal Buat: " . date('d-m-Y', strtotime($row['tanggal_buat'])) . "</p>
-                 <p class='text-sm $textColor bg-$bgColor inline-flex px-4 py-1 rounded-lg mt-2'>Tanggal Ubah: " . date('d-m-Y', strtotime($row['tanggal_ubah'])) . "</p>
-             </div>";
+    return "
+    <div style='background-color: $bgColor;' class='group rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 p-6 relative cursor-pointer flex flex-col h-full' onclick='openEditModal($idNote)'>
+        <span class='absolute top-4 right-4 $labelStyle px-3 py-1 text-xs font-semibold rounded-full shadow-sm'>$label</span>
+        <h2 class='text-xl font-bold mb-3 $textColor line-clamp-1 pr-20'>$judul</h2>
+        <p class='text-sm opacity-90 mb-4 flex-grow $textColor line-clamp-4 leading-relaxed'>$isi</p>
+        <div class='mt-auto pt-4 border-t border-black/10 flex justify-between items-center'>
+            <p class='text-xs font-medium opacity-75 $textColor'><i class='fa-regular fa-clock mr-1'></i> $tglBuat</p>
+        </div>
+    </div>";
 }
-
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="id">
 <head>
-  <meta charset="utf-8">
-  <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>Scribble Notes</title>
-  <link href="assets/img/favicon.png" rel="icon">
-  <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="font/fontawesome/css/all.min.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scribble Notes.</title>
+    <!-- Ganti ke font Inter untuk UI modern -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style> body { font-family: 'Inter', sans-serif; } </style>
 </head>
 
-<body class="bg-gray-100 font-roboto">
-  <header class="fixed top-0 left-0 right-0 bg-white shadow-md z-10">
-    <div class="container mx-auto px-4 py-4 flex items-center justify-between">
-      <a href="index.php" class="flex items-center">
-        <h1 class="text-2xl font-bold text-blue-600">Scribble Notes</h1>
-        <span class="text-2xl font-bold text-blue-600">.</span>
-      </a>
-      <nav class="hidden md:flex items-center space-x-4">
-        <div class="relative">
-          <input type="text" id="searchInput" placeholder="Search..." class="pl-3 pr-10 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" onkeypress="handleSearch(event)">
-          <button class="absolute right-3 top-1/2 transform -translate-y-1/2" onclick="performSearch()">
-            <i class="fas fa-search text-gray-400"></i>
-          </button>
+<body class="bg-slate-50 text-slate-800">
+    <!-- Header (Glassmorphism) -->
+    <header class="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md shadow-sm z-40 border-b border-slate-200">
+        <div class="container mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="index.php" class="flex items-center gap-1 group">
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
+                <h1 class="text-xl font-bold text-slate-900 tracking-tight ml-2">Scribble Notes<span class="text-blue-600">.</span></h1>
+            </a>
+            <div class="hidden md:block relative w-96">
+                <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="searchInput" placeholder="Cari catatan..." class="w-full pl-11 pr-4 py-2.5 bg-slate-100 border-none rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm" onkeyup="handleSearch(event)">
+            </div>
+            <button class="md:hidden text-slate-600"><i class="fas fa-bars text-xl"></i></button>
         </div>
-      </nav>
-      <button class="md:hidden text-gray-600">
-        <i class="bi bi-list text-2xl"></i>
-      </button>
-    </div>
-  </header>
+    </header>
 
-  <main class="mt-24 container mx-auto px-4">
-    <div class="flex justify-between">
-      <div>
-        <h1 class="text-4xl font-bold mb-4 text-gray-800">Scribble Notes</h1>
-        <p class="text-lg text-gray-600">Catatan anda baru-baru ini</p>
-      </div>
-
-      <div class="flex flex-row items-start">
-        <div class="px-4 py-5 rounded-full group border-2 border-gray-800 hover:bg-blue-500 hover:border-white transition-all cursor-pointer">
-          <a href="#" class="text-gray-800 group-hover:text-white"><i class="fas fa-2xl fa-gear ml-1"></i></a>
-          <ul class="absolute hidden group-hover:block bg-white shadow-md mt-2 py-2 w-48 z-10">
-            <li><a href="#" class="block px-4 py-2 text-gray-800 hover:bg-gray-200" onclick="openLabelModal()">Label</a></li>
-          </ul>
+    <main class="mt-28 container mx-auto px-6 mb-20">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold text-slate-900 mb-1">Catatan Anda</h1>
+                <p class="text-slate-500 text-sm">Kelola ide dan tugas Anda dengan mudah</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="openLabelModal()" class="flex items-center justify-center w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-blue-600 transition-all shadow-sm" title="Manajemen Label">
+                    <i class="fas fa-tags"></i>
+                </button>
+                <button onclick="toggleSort()" id="sortButton" class="flex items-center justify-center w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-blue-600 transition-all shadow-sm" title="Urutkan">
+                    <i id="sortIcon" class="fas fa-clock"></i>
+                </button>
+                <button onclick="window.location.href = 'tambahNote.php';" class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 transition-all">
+                    <i class="fas fa-plus"></i> Tambah
+                </button>
+            </div>
         </div>
-        <div class="p-5 text-gray-800 rounded-full group border-2 border-gray-800 hover:bg-blue-500 hover:border-white transition-all cursor-pointer" id="sortButton" title="sortir" onclick="toggleSort()">
-          <i id="sortIcon" class="fas fa-calendar-alt fa-2xl group-hover:text-white"></i>
-        </div>
-        <div class="p-5 text-gray-800 rounded-full group border-2 border-gray-800 hover:bg-blue-500 hover:border-white transition-all cursor-pointer" title="tambah note" onclick="window.location.href = 'tambahNote.php';">
-          <i class="fas fa-plus fa-2xl group group-hover:text-white"></i>
-        </div>
-      </div>
-    </div>
 
-    <section class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="notesSection">
-      <?php
-      $sql = "SELECT Notes.*, Labels.nama_label, Labels.warna, Notes.bg_color FROM Notes LEFT JOIN Labels ON Notes.id_label = Labels.id_label ORDER BY tanggal_buat DESC";
-      $result = $conn->query($sql);
+        <!-- Notes Grid -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="notesSection">
+            <?php
+            $sql = "SELECT Notes.*, Labels.nama_label FROM Notes LEFT JOIN Labels ON Notes.id_label = Labels.id_label ORDER BY tanggal_buat DESC";
+            $result = $conn->query($sql);
 
-      if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-          echo generateNoteCard($row);
-        }
-      } else {
-        echo "<div class='text-center'><p>Tidak ada catatan terdeteksi</p></div>";
-      }
-      ?>
-    </section>
-  </main>
-
-  <!-- Label Management Modal -->
-  <div id="labelModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
-    <div class="bg-white rounded-lg p-6 max-w-md w-full">
-      <h2 class="text-xl font-semibold mb-4">Manajemen Label</h2>
-      <input type="hidden" id="labelId">
-      <div class="mb-4">
-        <?php
-        $sql = "SELECT * FROM Labels";
-        $result = $conn->query($sql);
-
-        if ($result->num_rows > 0) {
-          echo "<div class='flex flex-col space-y-2'>";
-          while ($row = $result->fetch_assoc()) {
-            echo "<div class='flex items-center justify-between border-b-2 border-gray-200 pb-2'>";
-            echo "<h1 class='text-lg text-gray-800'>" . htmlspecialchars($row['nama_label']) . "</h1>";
-            echo "<button onclick='deleteLabel(" . $row['id_label'] . ")' class='bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700'>Hapus</button>";
-            echo "</div>";
-          }
-          echo "</div>";
-        } else {
-          echo "<h1 class='text-gray-600'>Belum Ada Label</h1>";
-        }
-        ?>
-      </div>
-      <div class="flex justify-between">
-        <button onclick="saveLabel()" class="bg-blue-600 text-white px-4 py-2 rounded-md">Simpan</button>
-        <button onclick="closeLabelModal()" class="ml-2 bg-gray-300 text-gray-700 px-4 py-2 rounded-md">Batal</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="editModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
-    <div class="bg-white rounded-lg p-6 max-w-md w-full">
-      <h2 class="text-xl font-semibold mb-4">Edit Catatan</h2>
-      <input type="hidden" id="noteId">
-      <div class="mb-4">
-        <label for="noteTitle" class="block text-sm font-medium text-gray-700">Judul</label>
-        <input type="text" id="noteTitle" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-500" required>
-      </div>
-      <div class="mb-4">
-        <label for="noteContent" class="block text-sm font-medium text-gray-700">Isi</label>
-        <textarea id="noteContent" rows="4" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-500" required></textarea>
-      </div>
-      <div class="mb-4">
-        <label for="noteLabel" class="block text-sm font-medium text-gray-700">Label</label>
-        <select id="noteLabel" name="label" class="form-control input-field">
-          <option value="">Pilih kategori</option>
-          <?php
-          $sql = "SELECT * FROM Labels";
-          $result = $conn->query($sql);
-          if ($result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-              echo "<option value='" . $row['id_label'] . "'>" . htmlspecialchars($row['nama_label']) . "</option>";
+            if ($result && $result->num_rows > 0) {
+                while ($row = $result->fetch_assoc()) echo generateNoteCard($row);
+            } else {
+                echo "<div class='col-span-full text-center py-20 text-slate-500'>
+                        <i class='fa-regular fa-folder-open text-5xl mb-4 opacity-50'></i>
+                        <p>Belum ada catatan.</p>
+                      </div>";
             }
-          } else {
-            echo "<option value=''>Belum Ada Kategori</option>";
-          }
-          ?>
-          <option value="tambah">Tambah</option>
-        </select>
-      </div>
+            ?>
+        </section>
+    </main>
 
-      <div class="flex justify-between">
-        <button onclick="updateNote()" class="bg-blue-600 text-white px-4 py-2 rounded-md">Simpan</button>
-        <button onclick="closeEditModal()" class="ml-2 bg-gray-300 text-gray-700 px-4 py-2 rounded-md">Batal</button>
-        <button onclick="deleteNote()" class="ml-2 bg-red-600 text-white px-4 py-2 rounded-md">Hapus</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-  localStorage.clear();
-
-  function deleteLabel(labelId) {
-    if (confirm('Apakah Anda yakin ingin menghapus label ini?')) {
-      const xhr = new XMLHttpRequest();
-      xhr.open("GET", `?delete_label_id=${labelId}`, true);
-      xhr.onload = function() {
-        const response = JSON.parse(this.responseText);
-        alert(response.success || response.error);
-
-        // Log debug information to the console
-        console.log('Debug Info:', response.debug);
-
-        if (response.success) {
-          location.reload(); // Reload the page to see the changes
-        }
-      };
-      xhr.send();
-    }
-  }
-
-  function openEditModal(noteId) {
-    const xhrNote = new XMLHttpRequest();
-    xhrNote.open("GET", `?note_id=${noteId}`, true);
-    xhrNote.onload = function() {
-      if (this.status === 200) {
-        const note = JSON.parse(this.responseText);
-        if (!note.error) {
-          document.getElementById('noteId').value = note.id_catatan;
-          document.getElementById('noteTitle').value = note.judul;
-          document.getElementById('noteContent').value = note.isi;
-          document.getElementById('noteLabel').value = note.id_label || '';
-          document.getElementById('editModal').classList.remove('hidden');
-        } else {
-          console.error(note.error);
-        }
-      }
-    };
-    xhrNote.send();
-  }
-
-  function closeEditModal() {
-    document.getElementById('editModal').classList.add('hidden');
-  }
-
-  function updateNote() {
-    const noteId = document.getElementById('noteId').value;
-    const title = document.getElementById('noteTitle').value;
-    const content = document.getElementById('noteContent').value;
-    const label = document.getElementById('noteLabel').value;
-
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "", true);
-    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-    xhr.onload = function() {
-      const response = JSON.parse(this.responseText);
-      alert(response.success || response.error);
-      if (response.success) {
-        location.reload();
-      }
-    };
-    xhr.send(`noteId=${noteId}&title=${title}&content=${content}&label=${label}`);
-  }
-
-  function performSearch() {
-  const searchTerm = document.getElementById('searchInput').value;
-  const xhr = new XMLHttpRequest();
-  xhr.open("GET", `?search=${searchTerm}`, true);
-  xhr.onload = function() {
-    const response = JSON.parse(this.responseText);
-    const notesSection = document.getElementById('notesSection');
-    notesSection.innerHTML = ''; // Clear current notes
-
-    // Generate HTML for each note and append to notesSection
-    response.notes.forEach(note => {
-      const noteCard = generateNoteCard(note);
-      notesSection.innerHTML += noteCard;
-    });
-  };
-  xhr.send();
-}
-
-  function handleSearch(event) {
-    if (event.key === 'Enter') {
-      performSearch();
-    }
-  }
-
-  let currentSort = 'tanggal';
-
-  function generateNoteCard(note) {
-    const bgColor = note.bg_color || 'gray'; // Default color if no color is set
-    const label = note.nama_label || 'Tanpa Kategori';
-    const textColor = note.id_label ? 'text-white' : 'text-gray-700';
-
-    return `
-      <div style="background-color: ${bgColor};" class="rounded-lg shadow-md p-6 relative cursor-pointer" onclick="openEditModal(${note.id_catatan})">
-        <span class="absolute top-2 right-2 bg-white text-${bgColor} px-3 py-1 text-sm font-semibold rounded">${label}</span>
-        <h2 class="text-xl font-semibold mb-2 ${textColor}" style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">${note.judul}</h2>
-        <p class="${textColor}" style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">${note.isi}</p>
-        <p class="text-sm ${textColor} bg-${bgColor} inline-flex px-4 py-1 rounded-lg mt-2">Tanggal Buat: ${new Date(note.tanggal_buat).toLocaleDateString()}</p>
-        <p class="text-sm ${textColor} bg-${bgColor} inline-flex px-4 py-1 rounded-lg mt-2">Tanggal Ubah: ${new Date(note.tanggal_ubah).toLocaleDateString()}</p>
-      </div>
-    `;
-  }
-
-  function toggleSort() {
-  currentSort = currentSort === 'judul' ? 'label' : currentSort === 'label' ? 'tanggal_ubah' : 'judul';
-  const xhr = new XMLHttpRequest();
-  xhr.open("GET", `?sort=${currentSort}`, true);
-  xhr.onload = function() {
-    const response = JSON.parse(this.responseText);
-    const notesSection = document.getElementById('notesSection');
-    notesSection.innerHTML = ''; // Clear current notes
-
-    // Generate HTML for each note and append to notesSection
-    response.notes.forEach(note => {
-      const bgColor = note.bg_color || 'gray'; // Default color if no color is set
-      const label = note.nama_label || 'Tanpa Kategori';
-      const textColor = note.id_label ? 'text-white' : 'text-gray-700';
-
-      const noteCard = `
-        <div style="background-color: ${bgColor};" class="rounded-lg shadow-md p-6 relative cursor-pointer" onclick="openEditModal(${note.id_catatan})">
-          <span class="absolute top-2 right-2 bg-white text-${bgColor} px-3 py-1 text-sm font-semibold rounded">${label}</span>
-          <h2 class="text-xl font-semibold mb-2 ${textColor}" style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">${note.judul}</h2>
-          <p class="${textColor}" style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">${note.isi}</p>
-          <p class="text-sm ${textColor} bg-${bgColor} inline-flex px-4 py-1 rounded-lg mt-2">Tanggal Buat: ${new Date(note.tanggal_buat).toLocaleDateString()}</p>
-          <p class="text-sm ${textColor} bg-${bgColor} inline-flex px-4 py-1 rounded-lg mt-2">Tanggal Ubah: ${new Date(note.tanggal_ubah).toLocaleDateString()}</p>
+    <!-- Modal Label -->
+    <div id="labelModal" class="fixed inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 z-50">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl transform scale-95 transition-transform duration-300" id="labelModalInner">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-800">Manajemen Label</h2>
+                <button onclick="closeLabelModal()" class="text-slate-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            
+            <div class="max-h-60 overflow-y-auto mb-4 bg-slate-50 rounded-xl p-2 border border-slate-100">
+                <?php
+                $sql = "SELECT * FROM Labels";
+                $result = $conn->query($sql);
+                if ($result && $result->num_rows > 0) {
+                    while ($row = $result->fetch_assoc()) {
+                        echo "<div class='flex items-center justify-between p-3 bg-white rounded-lg mb-2 shadow-sm border border-slate-100'>";
+                        echo "<span class='font-medium text-slate-700'>" . htmlspecialchars($row['nama_label']) . "</span>";
+                        echo "<button onclick='deleteLabel(" . $row['id_label'] . ")' class='text-red-500 hover:bg-red-50 p-2 rounded-md transition'><i class='fas fa-trash'></i></button>";
+                        echo "</div>";
+                    }
+                } else {
+                    echo "<p class='text-center text-slate-500 py-4 text-sm'>Belum ada label</p>";
+                }
+                ?>
+            </div>
+            
+            <div class="mt-4 border-t border-slate-100 pt-4">
+                <label class="block text-xs font-semibold text-slate-500 mb-2 uppercase">Tambah Label Baru</label>
+                <div class="flex gap-2">
+                    <input type="text" id="newLabelName" placeholder="Nama Label..." class="flex-1 bg-slate-100 border-none rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <button onclick="saveLabel()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition">Simpan</button>
+                </div>
+            </div>
         </div>
-      `;
+    </div>
 
-      notesSection.innerHTML += noteCard;
-    });
+    <!-- Modal Edit -->
+    <div id="editModal" class="fixed inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 z-50">
+        <div class="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl transform scale-95 transition-transform duration-300" id="editModalInner">
+            <h2 class="text-xl font-bold text-slate-800 mb-6">Edit Catatan</h2>
+            <input type="hidden" id="noteId">
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-600 mb-1">Judul</label>
+                    <input type="text" id="noteTitle" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-600 mb-1">Isi Catatan</label>
+                    <textarea id="noteContent" rows="5" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-600 mb-1">Label</label>
+                    <select id="noteLabel" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        <option value="">Tanpa Kategori</option>
+                        <?php
+                        $sql = "SELECT * FROM Labels";
+                        $result = $conn->query($sql);
+                        if ($result && $result->num_rows > 0) {
+                            while ($row = $result->fetch_assoc()) {
+                                echo "<option value='" . $row['id_label'] . "'>" . htmlspecialchars($row['nama_label']) . "</option>";
+                            }
+                        }
+                        ?>
+                    </select>
+                </div>
+            </div>
 
-    // Update sort icon
-    document.getElementById('sortIcon').className = currentSort === 'judul' ? 'fas fa-book fa-2xl group-hover:text-white' : currentSort === 'label' ? 'fas fa-tags fa-2xl group-hover:text-white' : 'fas fa-calendar-alt fa-2xl group-hover:text-white';
-  };
-  xhr.send();
-}
+            <div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-100">
+                <button onclick="deleteNote()" class="text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg font-medium transition flex items-center gap-2">
+                    <i class="fas fa-trash"></i> Hapus
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="closeEditModal()" class="text-slate-600 hover:bg-slate-100 px-4 py-2 rounded-lg font-medium transition">Batal</button>
+                    <button onclick="updateNote()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-  function deleteNote() {
-    const noteId = document.getElementById('noteId').value;
-    const xhr = new XMLHttpRequest();
-    xhr.open("GET", `?delete_id=${noteId}`, true);
-    xhr.onload = function() {
-      const response = JSON.parse(this.responseText);
-      alert(response.success || response.error);
-      if (response.success) {
-        location.reload();
-      }
-    };
-    xhr.send();
-  }
+    <!-- JS Menggunakan Fetch API (Modern & Clean) -->
+    <script>
+        let currentSort = 'tanggal';
+        let searchTimeout = null;
 
-  function openLabelModal() {
-    document.getElementById('labelModal').classList.remove('hidden');
-  }
+        // --- Helper Fungsi JavaScript untuk Kontras Otomatis (Saat Fetching) ---
+        function getContrastColor(hexcolor) {
+            hexcolor = hexcolor.replace('#', '');
+            if(hexcolor.length === 3) {
+                hexcolor = hexcolor[0]+hexcolor[0]+hexcolor[1]+hexcolor[1]+hexcolor[2]+hexcolor[2];
+            }
+            if(hexcolor.length !== 6) return 'text-slate-800';
+            
+            var r = parseInt(hexcolor.substr(0,2),16);
+            var g = parseInt(hexcolor.substr(2,2),16);
+            var b = parseInt(hexcolor.substr(4,2),16);
+            var yiq = ((r*299)+(g*587)+(b*114))/1000;
+            return (yiq >= 128) ? 'text-slate-800' : 'text-white';
+        }
 
-  function closeLabelModal() {
-    document.getElementById('labelModal').classList.add('hidden');
-    document.getElementById('labelId').value = '';
-    document.getElementById('labelName').value = '';
-  }
+        // --- Fetch Data Core Function ---
+        async function fetchNotes(queryParam = '') {
+            try {
+                const response = await fetch(`?action=get_notes&${queryParam}`);
+                const data = await response.json();
+                renderNotes(data.notes);
+            } catch (error) {
+                console.error("Gagal mengambil data:", error);
+            }
+        }
 
-  function saveLabel() {
-    const labelId = document.getElementById('labelId').value;
-    const labelName = document.getElementById('labelName').value;
+        function renderNotes(notes) {
+            const container = document.getElementById('notesSection');
+            if (!notes || notes.length === 0) {
+                container.innerHTML = `<div class='col-span-full text-center py-20 text-slate-500'><i class='fa-regular fa-folder-open text-5xl mb-4 opacity-50'></i><p>Tidak ada catatan ditemukan.</p></div>`;
+                return;
+            }
 
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "save_label.php", true);
-    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-    xhr.onload = function() {
-      const response = JSON.parse(this.responseText);
-      alert(response.success || response.error);
-      if (response.success) {
-        location.reload();
-      }
-    };
-    xhr.send(`labelId=${labelId}&labelName=${labelName}`);
-  }
-</script>
+            container.innerHTML = notes.map(note => {
+                const bgColor = note.bg_color || '#ffffff';
+                const label = note.nama_label || 'Tanpa Kategori';
+                
+                // Gunakan fungsi kontras di JS untuk render Live Search
+                const textColor = getContrastColor(bgColor);
+                const labelStyle = (textColor === 'text-white') ? "bg-black/30 text-white" : "bg-white/80 text-slate-700";
+                
+                const tglBuat = new Date(note.tanggal_buat).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'});
+
+                return `
+                <div style="background-color: ${bgColor};" class="group rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 p-6 relative cursor-pointer flex flex-col h-full" onclick="openEditModal(${note.id_catatan})">
+                    <span class="absolute top-4 right-4 ${labelStyle} backdrop-blur px-3 py-1 text-xs font-semibold rounded-full shadow-sm">${label}</span>
+                    <h2 class="text-xl font-bold mb-3 ${textColor} line-clamp-1 pr-20">${note.judul}</h2>
+                    <p class="text-sm opacity-90 mb-4 flex-grow ${textColor} line-clamp-4 leading-relaxed">${note.isi}</p>
+                    <div class="mt-auto pt-4 border-t border-black/10 flex justify-between items-center">
+                        <p class="text-xs font-medium opacity-75 ${textColor}"><i class="fa-regular fa-clock mr-1"></i> ${tglBuat}</p>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // --- Fitur Search (Realtime) ---
+        function handleSearch(event) {
+            clearTimeout(searchTimeout);
+            const term = event.target.value;
+            searchTimeout = setTimeout(() => fetchNotes(`search=${term}`), 300);
+        }
+
+        // --- Fitur Sort ---
+        function toggleSort() {
+            currentSort = currentSort === 'tanggal' ? 'judul' : currentSort === 'judul' ? 'label' : 'tanggal';
+            
+            const icon = document.getElementById('sortIcon');
+            icon.className = currentSort === 'judul' ? 'fas fa-font' : currentSort === 'label' ? 'fas fa-tags' : 'fas fa-clock';
+            
+            fetchNotes(`sort=${currentSort}`);
+        }
+
+        // --- Modals Controller (Dengan Animasi) ---
+        function openModal(id, innerId) {
+            const modal = document.getElementById(id);
+            const inner = document.getElementById(innerId);
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            inner.classList.remove('scale-95');
+            inner.classList.add('scale-100');
+        }
+
+        function closeModal(id, innerId) {
+            const modal = document.getElementById(id);
+            const inner = document.getElementById(innerId);
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            inner.classList.remove('scale-100');
+            inner.classList.add('scale-95');
+        }
+
+        // --- CRUD Notes ---
+        async function openEditModal(noteId) {
+            try {
+                const response = await fetch(`?note_id=${noteId}`);
+                const note = await response.json();
+                if (!note.error) {
+                    document.getElementById('noteId').value = note.id_catatan;
+                    document.getElementById('noteTitle').value = note.judul;
+                    document.getElementById('noteContent').value = note.isi;
+                    document.getElementById('noteLabel').value = note.id_label || '';
+                    openModal('editModal', 'editModalInner');
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function closeEditModal() { closeModal('editModal', 'editModalInner'); }
+
+        async function updateNote() {
+            const data = new URLSearchParams();
+            data.append('noteId', document.getElementById('noteId').value);
+            data.append('title', document.getElementById('noteTitle').value);
+            data.append('content', document.getElementById('noteContent').value);
+            data.append('label', document.getElementById('noteLabel').value);
+
+            await fetch('', { method: 'POST', body: data });
+            closeEditModal();
+            fetchNotes(); // Reload notes silently
+        }
+
+        async function deleteNote() {
+            if (!confirm('Yakin hapus catatan ini?')) return;
+            const id = document.getElementById('noteId').value;
+            await fetch(`?delete_id=${id}`);
+            closeEditModal();
+            fetchNotes();
+        }
+
+        // --- CRUD Labels ---
+        function openLabelModal() { openModal('labelModal', 'labelModalInner'); }
+        function closeLabelModal() { closeModal('labelModal', 'labelModalInner'); }
+
+        async function deleteLabel(id) {
+            if(confirm('Hapus label ini? Catatan terkait akan menjadi Tanpa Kategori.')) {
+                await fetch(`?delete_label_id=${id}`);
+                location.reload(); // Hard reload untuk update dropdown
+            }
+        }
+
+        async function saveLabel() {
+            const labelName = document.getElementById('newLabelName').value;
+            if(!labelName) return alert('Nama label tidak boleh kosong');
+            
+            const data = new URLSearchParams();
+            data.append('labelName', labelName);
+            // Anggap kamu punya file save_label.php yang menangani POST ini
+            await fetch('save_label.php', { method: 'POST', body: data });
+            location.reload();
+        }
+    </script>
 </body>
-
 </html>
