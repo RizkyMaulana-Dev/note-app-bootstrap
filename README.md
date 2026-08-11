@@ -35,7 +35,7 @@ Akses aplikasi melalui browser:
 * **Landing Page**: `http://localhost/note-app-bootstrap/index.php`
 * **Dashboard Catatan**: `http://localhost/note-app-bootstrap/data.php`
 
----
+```
 
 ## 👥 Tim Pengembang (Kelompok 2)
 
@@ -52,4 +52,3 @@ Proyek ini dikembangkan oleh **Kelompok 2** - **SMKN 4 Padalarang**:
 
 © **Kelompok 2 - SMKN 4 Padalarang**. All Rights Reserved.
 Dikembangkan untuk tujuan pembelajaran dan pengembangan aplikasi web modern.
-```
