@@ -1,90 +1,55 @@
-# 📝 Scribble Notes - Smart Note-Taking App
+## 🚀 Panduan Instalasi (Local Development)
 
-![PHP Native](https://img.shields.io/badge/PHP-7.4%2B%20%7C%208.x-777BB4?style=for-the-badge&logo=php&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-ES6%2B-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+Ikuti langkah-langkah berikut untuk menjalankan proyek di komputer lokal:
 
-**Scribble Notes** adalah aplikasi manajemen catatan berbasis web yang dirancang dengan antarmuka modern, responsif, dan bersih (*clean UI*). Aplikasi ini membantu pengguna mencatat ide, tugas, dan prioritas sehari-hari secara cepat, efisien, dan bebas gangguan (*distraction-free*).
+### 1. Simpan Project ke Web Server
 
-Dibuat menggunakan **PHP Native** berarsitektur *asynchronous* (Fetch API) dan didesain menggunakan **Tailwind CSS**.
+Letakkan folder proyek di dalam direktori server lokal (Laragon/XAMPP):
 
----
+- **Laragon**: `C:\laragon\www\note-app-bootstrap`
+- **XAMPP**: `C:\xampp\htdocs\note-app-bootstrap`
 
-## 📸 Pratinjau Tampilan (Screenshots)
+### 2. Setup Database
 
-| Landing Page | Dashboard Catatan |
-| :---: | :---: |
-| ![Landing Page](docs/MainPages.png) | ![Note Management](docs/NoteManagement.png) |
+1. Buka **phpMyAdmin** (`http://localhost/phpmyadmin`).
+2. Buat database baru (misal: `note-app`).
+3. Cari file **`note-app.sql`** yang ada di root direktori project, lalu **Import** file tersebut ke dalam database yang baru dibuat di phpMyAdmin.
+4. Sesuaikan konfigurasi nama database dan kredensial di file `koneksi.php` jika diperlukan.
 
-| Tambah Catatan (Color Picker) | Modal Edit & Detail |
-| :---: | :---: |
-| ![Add Note](docs/AddNote.png) | ![Note Detail](docs/NoteDetail.png) |
+### 3. Install Dependencies & Build Tailwind CSS
 
----
+Buka terminal/PowerShell di dalam direktori project, lalu jalankan perintah berikut:
 
-## ✨ Fitur-Fitur Utama
+```bash
+# 1. Install seluruh package/dependencies
+npm install
 
-### 1. 🏠 Landing Page Interaktif & Modern
-* **Hero Section dengan Animasi Typing**: Efek teks mengetik otomatis untuk menampilkan berbagai jenis catatan (Ide, Tugas, Proyek, dll).
-* **Glassmorphic Navigation Bar**: Header transparan dengan efek *blur* kekinian.
-* **Informasi Tim & Teknologi**: Modul *About Us* dan daftar anggota tim pengembang proyek.
+# 2. Jalankan perintah ini untuk mode pengembangan (watch mode)
+npm run dev
 
-### 2. 📋 Manajemen Catatan (Full CRUD)
-* **Tambah Catatan (`tambahNote.php`)**: Form pembuatan catatan lengkap dengan pilihan judul, isi, kategori, dan warna latar (*color picker*).
-* **Auto-Drafting (LocalStorage)**: Menjaga draf tulisan agar tidak hilang saat halaman tidak sengaja ter-refresh.
-* **Edit Catatan tanpa Reload (Modal Interaktif)**: Mengubah isi catatan secara instan melalui modal *popup*.
-* **Hapus Catatan**: Penghapusan catatan secara aman dengan konfirmasi modal.
+# ATAU jalankan ini untuk memproduksi CSS versi kompilasi akhir
+npm run build
 
-### 3. 🎨 Smart Color Contrast Ratio (YIQ Algorithm)
-* Aplikasi secara otomatis menghitung tingkat kecerahan (*luminance*) dari warna latar belakang (*background*) catatan yang dipilih pengguna.
-* Jika latar belakang terang/pastel, warna teks otomatis menjadi **Hitam/Abu Gelap**.
-* Jika latar belakang gelap, warna teks otomatis berubah menjadi **Putih**.
-* *Mencegah teks "tidak terlihat" atau kontras yang buruk.*
-
-### 4. 🏷️ Kategori & Manajemen Label
-* Pengelompokan catatan berdasarkan label/kategori.
-* Modal **Manajemen Label** khusus untuk menambah dan menghapus label kategori.
-* Relasi basis data aman (*foreign key handling*): jika label dihapus, catatan terkait otomatis berubah menjadi *Tanpa Kategori*.
-
-### 5. 🔍 Live Search & Sorting Instant
-* **Pencarian Realtime**: Pencarian kata kunci pada judul atau isi catatan secara langsung tanpa perlu klik tombol cari atau mereload halaman.
-* **Pengurutan Dinamis (Sort)**: Mengurutkan catatan berdasarkan *Tanggal Dibuat*, *Judul (A-Z)*, atau *Label/Kategori*.
+### 4. Buka Aplikasi
+Akses aplikasi melalui browser:
+* **Landing Page**: `http://localhost/note-app-bootstrap/index.php`
+* **Dashboard Catatan**: `http://localhost/note-app-bootstrap/data.php`
 
 ---
 
-## 🛠️ Teknologi yang Digunakan
+## 👥 Tim Pengembang (Kelompok 2)
 
-* **Backend**: PHP Native (Prosedural/OOP dasar)
-* **Database**: MySQL / MariaDB (Driver MySQLi)
-* **Frontend Framework**: Tailwind CSS v3 (Custom Utility)
-* **Iconography**: FontAwesome v6 & Bootstrap Icons
-* **Scripting**: Pure JavaScript (ES6+ Fetch API, DOM Manipulation, LocalStorage)
-* **Server Environment**: Laragon / XAMPP (Apache Web Server)
+Proyek ini dikembangkan oleh **Kelompok 2** - **SMKN 4 Padalarang**:
+
+* **Rizky Maulana** - *BackEnd Developer & Flowchart System*
+* **Rafi B** - *FrontEnd Developer*
+* **Dika** - *UI/UX Designer & Quality Assurance (QA)*
+* **Dearly** - *Support & Project Documentation*
 
 ---
 
-## 📁 Struktur Direktori Proyek
+## 📄 Lisensi & Hak Cipta
 
-```text
-note-app-bootstrap/
-│
-├── assets/                  # Asset statis (Gambar, logo, favicon, JS vendor)
-├── dist/                    # Compiled Tailwind CSS output (output.css)
-├── font/                    # File FontAwesome & Custom Fonts
-├── forms/                   # Script penanganan form
-├── node_modules/            # NPM Dependencies (TailwindCSS CLI)
-│
-├── data.php                 # Dashboard utama manajemen & grid catatan
-├── index.php                # Landing Page (Home, About, Team, Features)
-├── koneksi.php              # Konfigurasi koneksi ke database MySQL
-├── tambahNote.php           # Halaman form pembuatan catatan baru
-├── note-app.sql             # Export file database / struktur tabel
-│
-├── package.json             # Konfigurasi NPM & script build Tailwind
-├── package-lock.json        # NPM lockfile
-├── tailwind.config.js       # Konfigurasi custom Tailwind CSS
-├── portfolio-details.php    # Halaman pendukung template
-├── service-details.php      # Halaman pendukung template
-├── starter-page.php         # Starter template page
-└── Readme.txt               # Catatan proyek bawaan
+© **Kelompok 2 - SMKN 4 Padalarang**. All Rights Reserved.
+Dikembangkan untuk tujuan pembelajaran dan pengembangan aplikasi web modern.
+```

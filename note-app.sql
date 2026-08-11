@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.1deb3
+-- version 5.2.3
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Waktu pembuatan: 11 Okt 2024 pada 02.38
--- Versi server: 8.0.37-0ubuntu0.24.04.1
--- Versi PHP: 8.3.9
+-- Generation Time: Aug 11, 2026 at 12:20 PM
+-- Server version: 8.4.3
+-- PHP Version: 8.3.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -24,10 +24,10 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
--- Struktur dari tabel `Images`
+-- Table structure for table `images`
 --
 
-CREATE TABLE `Images` (
+CREATE TABLE `images` (
   `id` int NOT NULL,
   `image_path` varchar(255) NOT NULL,
   `image_name` varchar(255) NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE `Images` (
 -- --------------------------------------------------------
 
 --
--- Struktur dari tabel `kategori`
+-- Table structure for table `kategori`
 --
 
 CREATE TABLE `kategori` (
@@ -47,7 +47,7 @@ CREATE TABLE `kategori` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
--- Dumping data untuk tabel `kategori`
+-- Dumping data for table `kategori`
 --
 
 INSERT INTO `kategori` (`id`, `nama`, `warna`) VALUES
@@ -61,30 +61,30 @@ INSERT INTO `kategori` (`id`, `nama`, `warna`) VALUES
 -- --------------------------------------------------------
 
 --
--- Struktur dari tabel `Labels`
+-- Table structure for table `labels`
 --
 
-CREATE TABLE `Labels` (
+CREATE TABLE `labels` (
   `id_label` int NOT NULL,
   `nama_label` varchar(50) NOT NULL,
   `warna` varchar(10) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
--- Dumping data untuk tabel `Labels`
+-- Dumping data for table `labels`
 --
 
-INSERT INTO `Labels` (`id_label`, `nama_label`, `warna`) VALUES
+INSERT INTO `labels` (`id_label`, `nama_label`, `warna`) VALUES
 (12, 'Kerja', 'blue'),
 (13, 'Sekolah', 'yellow');
 
 -- --------------------------------------------------------
 
 --
--- Struktur dari tabel `Notes`
+-- Table structure for table `notes`
 --
 
-CREATE TABLE `Notes` (
+CREATE TABLE `notes` (
   `id_catatan` int NOT NULL,
   `judul` varchar(255) NOT NULL,
   `isi` text NOT NULL,
@@ -95,72 +95,70 @@ CREATE TABLE `Notes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
--- Dumping data untuk tabel `Notes`
+-- Dumping data for table `notes`
 --
 
-INSERT INTO `Notes` (`id_catatan`, `judul`, `isi`, `tanggal_buat`, `tanggal_ubah`, `id_label`, `bg_color`) VALUES
-(13, 'AAA', 'asd', '2024-10-11 09:14:52', '2024-10-11 09:14:52', 12, 'blue'),
-(14, 'BBB', 'asddwae', '2024-10-11 09:15:45', '2024-10-11 09:15:45', 13, 'green'),
-(15, 'zzz', 'adasdasd', '2024-10-11 09:15:55', '2024-10-11 09:15:55', 13, 'orange'),
-(16, 'dfsdf', 'adswae', '2024-10-11 09:16:08', '2024-10-11 09:16:08', 12, 'purple');
+INSERT INTO `notes` (`id_catatan`, `judul`, `isi`, `tanggal_buat`, `tanggal_ubah`, `id_label`, `bg_color`) VALUES
+(19, 'Tugas', 'MTK, B.INDO, SEJARAH', '2026-08-11 18:54:26', '2026-08-11 18:58:57', 12, '#bbf7d0'),
+(20, 'Tugas Sejarah Video', 'Membuat presentasi tentang sejarah proklamasi 1945', '2026-08-11 18:56:48', '2026-08-11 18:56:48', NULL, '#ffffff');
 
 --
 -- Indexes for dumped tables
 --
 
 --
--- Indeks untuk tabel `Images`
+-- Indexes for table `images`
 --
-ALTER TABLE `Images`
+ALTER TABLE `images`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indeks untuk tabel `kategori`
+-- Indexes for table `kategori`
 --
 ALTER TABLE `kategori`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indeks untuk tabel `Labels`
+-- Indexes for table `labels`
 --
-ALTER TABLE `Labels`
+ALTER TABLE `labels`
   ADD PRIMARY KEY (`id_label`),
   ADD UNIQUE KEY `nama_label` (`nama_label`);
 
 --
--- Indeks untuk tabel `Notes`
+-- Indexes for table `notes`
 --
-ALTER TABLE `Notes`
+ALTER TABLE `notes`
   ADD PRIMARY KEY (`id_catatan`),
   ADD KEY `id_label` (`id_label`);
 
 --
--- AUTO_INCREMENT untuk tabel yang dibuang
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT untuk tabel `Images`
+-- AUTO_INCREMENT for table `images`
 --
-ALTER TABLE `Images`
+ALTER TABLE `images`
   MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT untuk tabel `kategori`
+-- AUTO_INCREMENT for table `kategori`
 --
 ALTER TABLE `kategori`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
--- AUTO_INCREMENT untuk tabel `Labels`
+-- AUTO_INCREMENT for table `labels`
 --
-ALTER TABLE `Labels`
+ALTER TABLE `labels`
   MODIFY `id_label` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
--- AUTO_INCREMENT untuk tabel `Notes`
+-- AUTO_INCREMENT for table `notes`
 --
-ALTER TABLE `Notes`
-  MODIFY `id_catatan` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+ALTER TABLE `notes`
+  MODIFY `id_catatan` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
